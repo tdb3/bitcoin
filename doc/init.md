@@ -36,7 +36,8 @@ content when the daemon starts, and deleted when it exits. Read access to this f
 controls who can access it through RPC.
 
 By default the cookie is stored in the data directory, but it's location can be overridden
-with the option '-rpccookiefile'.
+with the option '-rpccookiefile'. Default file permissions for the cookie are `400`, but 
+can be overridden with '-rpccookieperms'.
 
 This allows for running bitcoind without having to do any manual configuration.
 
