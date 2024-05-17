@@ -458,6 +458,25 @@ class TestNode():
             dl.seek(0, 2)
             return dl.tell()
 
+    def get_debug_log_message(self, pattern: str, omit_timestamp: bool=True) -> list[str]:
+        """
+        Searches the debug log for lines matching pattern (regex supported).
+        Returns a list containing each matching line (or empty list).
+        """
+        p = re.compile(pattern)
+        ret = []
+        with open(self.debug_log_path, 'r') as file:
+            for line in file:
+                match = p.search(line)
+                if match:
+                    if omit_timestamp:
+                        _, _, msg = line.partition(" ") # exclude timestamp/space
+                        ret.append(msg)
+                    else:
+                        ret.append(line)
+                # else continue searching the debug log
+        return ret
+
     @contextlib.contextmanager
     def assert_debug_log(self, expected_msgs, unexpected_msgs=None, timeout=2):
         if unexpected_msgs is None:
