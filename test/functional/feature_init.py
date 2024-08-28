@@ -8,11 +8,13 @@ import platform
 import shutil
 
 from test_framework.test_framework import BitcoinTestFramework, SkipTest
-from test_framework.test_node import ErrorMatch
+from test_framework.test_node import (
+    BITCOIN_PID_FILENAME_DEFAULT,
+    ErrorMatch,
+)
 from test_framework.util import assert_equal
 
 
-BITCOIN_PID_FILENAME_DEFAULT = "bitcoind.pid"
 BITCOIN_PID_FILENAME_CUSTOM = "my_fancy_bitcoin_pid_file.foobar"
 
 
