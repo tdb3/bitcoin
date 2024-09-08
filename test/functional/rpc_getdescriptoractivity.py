@@ -6,14 +6,17 @@
 from io import BytesIO
 
 from test_framework.test_framework import BitcoinTestFramework
-from test_framework.util import assert_equal
+from test_framework.util import (
+    assert_equal,
+    assert_raises_rpc_error,
+)
 from test_framework.messages import COIN, CTransaction
 from test_framework.wallet import MiniWallet, getnewdestination
 
 
 class GetBlocksActivityTest(BitcoinTestFramework):
     def set_test_params(self):
-        self.num_nodes = 1
+        self.num_nodes = 2
 
     def run_test(self):
         node = self.nodes[0]
@@ -25,6 +28,7 @@ class GetBlocksActivityTest(BitcoinTestFramework):
         self.test_no_mempool_inclusion(node, wallet)
         self.test_multiple_addresses(node, wallet)
         self.test_invalid_blockhash(node, wallet)
+        self.test_block_outside_main_chain(wallet)
         self.test_confirmed_and_unconfirmed(node, wallet)
         # self.test_receive_then_spend(node, wallet)
 
@@ -165,6 +169,30 @@ class GetBlocksActivityTest(BitcoinTestFramework):
         assert result['activity'][1]['blockhash'] == blockhash_2
         assert result['activity'][0]['address'] == addr_1
         assert result['activity'][0]['value'] == 0.9999
+
+    def test_block_outside_main_chain(self, wallet):
+        self.log.info("Check that activity outside of the main chain is not reported")
+
+        self.generate(self.nodes[0], 1) # Generate to get more fees
+
+        self.log.info("Disconnect the two nodes and generate two new blocks on node 0")
+        self.disconnect_nodes(0, 1)
+        self.generate(self.nodes[0], 2, sync_fun=self.no_op)
+
+        self.log.info("On node 1, spend to an address, generate a block to confirm, and check that the activity is found")
+        _, spk_1, addr_1 = getnewdestination()
+        spend = wallet.send_to(from_node=self.nodes[1], scriptPubKey=spk_1, amount=1 * COIN)
+        side_blockhash = self.generate(self.nodes[1], 1, sync_fun=self.no_op)[0]
+        result = self.nodes[1].getdescriptoractivity([side_blockhash], [f"addr({addr_1})"], False)
+        assert_equal(len(result['activity']), 1)
+
+        self.log.info("Reconnect the nodes, orphaning the block containing the activity, then confirming the tx")
+        self.connect_nodes(0, 1)
+        self.nodes[1].sendrawtransaction(spend['hex']) # rebroadcast tx
+        self.generate(self.nodes[0], 1)
+
+        self.log.info("Check that error occurs when looking for activity in the orphaned block")
+        assert_raises_rpc_error(-8, "Block is not in main chain", self.nodes[1].getdescriptoractivity, [side_blockhash], [f"addr({addr_1})"], False)
 
 
 if __name__ == '__main__':
