@@ -915,6 +915,54 @@ static RPCHelpMan getorphantxs()
     };
 }
 
+static RPCHelpMan getorphanageinfo()
+{
+    return RPCHelpMan{"getorphanageinfo",
+        "\nProvides orphanage statistics.\n"
+        "\nEXPERIMENTAL warning: this call may be changed in future releases.\n",
+        {},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::NUM, "num", "Current number of orphans in the orphanage"},
+                {RPCResult::Type::NUM, "bytes", "Sum of all serialized transaction sizes in bytes"},
+                {RPCResult::Type::NUM, "vsize", "Sum of all virtual transaction sizes as defined in BIP 141. Differs from actual serialized size because witness data is discounted"},
+                {RPCResult::Type::NUM, "weight", "Sum of all transaction weights as defined in BIP 141"},
+                {RPCResult::Type::NUM, "capacity", "Maximum number of orphans allowed in the orphanage"},
+                {RPCResult::Type::NUM_TIME, "maxretention", "Maximum number of seconds orphans are retained"},
+            }},
+        RPCExamples{
+            HelpExampleCli("getorphanageinfo", "")
+            + HelpExampleRpc("getorphanageinfo", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            const NodeContext& node = EnsureAnyNodeContext(request.context);
+            PeerManager& peerman = EnsurePeerman(node);
+            std::vector<TxOrphanage::OrphanTxBase> orphanage = peerman.GetOrphanTransactions();
+
+            int total_bytes{0};
+            int total_vsize{0};
+            int total_weight{0};
+            for (auto const& orphan : orphanage) {
+                total_bytes += orphan.tx->GetTotalSize();
+                total_vsize += GetVirtualTransactionSize(*orphan.tx);
+                total_weight += GetTransactionWeight(*orphan.tx);
+            }
+
+            UniValue ret(UniValue::VOBJ);
+            ret.pushKV("num", orphanage.size());
+            ret.pushKV("bytes", total_bytes);
+            ret.pushKV("vsize", total_vsize);
+            ret.pushKV("weight", total_weight);
+            ret.pushKV("capacity", DEFAULT_MAX_ORPHAN_TRANSACTIONS);
+            ret.pushKV("maxretention", std::chrono::duration_cast<std::chrono::seconds>(ORPHAN_TX_EXPIRE_TIME).count());
+
+            return ret;
+        },
+    };
+}
+
 static RPCHelpMan submitpackage()
 {
     return RPCHelpMan{"submitpackage",
@@ -1131,6 +1179,7 @@ void RegisterMempoolRPCCommands(CRPCTable& t)
         {"blockchain", &importmempool},
         {"blockchain", &savemempool},
         {"hidden", &getorphantxs},
+        {"hidden", &getorphanageinfo},
         {"rawtransactions", &submitpackage},
     };
     for (const auto& c : commands) {
