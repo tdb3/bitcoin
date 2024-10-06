@@ -7,6 +7,7 @@
 import time
 
 from test_framework.mempool_util import (
+    ORPHANAGE_CAPACITY,
     ORPHAN_MAX_RETENTION_TIME,
     tx_in_orphanage,
 )
@@ -15,6 +16,7 @@ from test_framework.p2p import P2PInterface
 from test_framework.util import (
     assert_approx,
     assert_equal,
+    count_bytes,
 )
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.wallet import MiniWallet
@@ -56,6 +58,15 @@ class OrphanRPCsTest(BitcoinTestFramework):
         self.log.info("Check that both children are in the orphanage")
         assert tx_in_orphanage(node, tx_child_1["tx"])
         assert tx_in_orphanage(node, tx_child_2["tx"])
+
+        self.log.info("Check reporting from getorphanageinfo")
+        orphanage_info = node.getorphanageinfo()
+        assert_equal(orphanage_info["num"], 2)
+        assert_equal(orphanage_info["capacity"], ORPHANAGE_CAPACITY)
+        assert_equal(orphanage_info["maxretention"], ORPHAN_MAX_RETENTION_TIME)
+        assert_equal(orphanage_info["bytes"], count_bytes(tx_child_1["hex"]) + count_bytes(tx_child_2["hex"]))
+        assert_equal(orphanage_info["vsize"], tx_child_1["tx"].get_vsize() + tx_child_2["tx"].get_vsize())
+        assert_equal(orphanage_info["weight"], tx_child_1["tx"].get_weight() + tx_child_2["tx"].get_weight())
 
         self.log.info("Broadcast parent 1")
         peer.send_and_ping(msg_tx(tx_parent_1["tx"]))

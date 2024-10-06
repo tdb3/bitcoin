@@ -19,6 +19,7 @@ from .wallet import (
     MiniWallet,
 )
 
+ORPHANAGE_CAPACITY = 100
 ORPHAN_MAX_RETENTION_TIME = 1200
 
 
