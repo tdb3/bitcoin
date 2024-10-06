@@ -37,13 +37,14 @@ class GetOrphanTxsTest(BitcoinTestFramework):
         self.log.info("Check that neither parent is in the mempool")
         assert_equal(node.getmempoolinfo()["size"], 0)
 
-        self.log.info("Check that both children are in the orphanage")
-
         orphanage = node.getorphantxs(verbosity=0)
         self.log.info("Check the size of the orphanage")
         assert_equal(len(orphanage), 2)
         self.log.info("Check that negative verbosity is treated as 0")
         assert_equal(orphanage, node.getorphantxs(verbosity=-1))
+        self.log.info("Check that verbosity >2 is treated as 2")
+        assert_equal(node.getorphantxs(verbosity=2), node.getorphantxs(verbosity=3))
+        self.log.info("Check that both children are in the orphanage")
         assert tx_in_orphanage(node, tx_child_1["tx"])
         assert tx_in_orphanage(node, tx_child_2["tx"])
 
