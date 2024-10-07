@@ -156,6 +156,9 @@ class OrphanRPCsTest(BitcoinTestFramework):
         self.log.info("Check that getorphantxs is a hidden RPC")
         assert "getorphantxs" not in help_output
         assert "unknown command: getorphantxs" not in node.help("getorphantxs")
+        self.log.info("Check that getorphanageinfo is a hidden RPC")
+        assert "getorphanageinfo" not in help_output
+        assert "unknown command: getorphanageinfo" not in node.help("getorphanageinfo")
 
 
 if __name__ == '__main__':
