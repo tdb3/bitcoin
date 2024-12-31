@@ -428,6 +428,13 @@ static RPCHelpMan getmininginfo()
                         {RPCResult::Type::NUM, "pooledtx", "The size of the mempool"},
                         {RPCResult::Type::STR, "chain", "current network name (" LIST_CHAIN_NAMES ")"},
                         {RPCResult::Type::STR_HEX, "signet_challenge", /*optional=*/true, "The block challenge (aka. block script), in hexadecimal (only present if the current network is a signet)"},
+                        {RPCResult::Type::OBJ, "next", "The next block, if found now",
+                        {
+                            {RPCResult::Type::NUM, "height", "The next height"},
+                            {RPCResult::Type::STR_HEX, "bits", "The next target nBits"},
+                            {RPCResult::Type::NUM, "difficulty", "The next difficulty"},
+                            {RPCResult::Type::STR_HEX, "target", "The next target"}
+                        }},
                         (IsDeprecatedRPCEnabled("warnings") ?
                             RPCResult{RPCResult::Type::STR, "warnings", "any network and blockchain warnings (DEPRECATED)"} :
                             RPCResult{RPCResult::Type::ARR, "warnings", "any network and blockchain warnings (run with `-deprecatedrpc=warnings` to return the latest warning as a single string)",
@@ -447,8 +454,9 @@ static RPCHelpMan getmininginfo()
     const CTxMemPool& mempool = EnsureMemPool(node);
     ChainstateManager& chainman = EnsureChainman(node);
     LOCK(cs_main);
+    auto consensusParams{chainman.GetParams().GetConsensus()};
     const CChain& active_chain = chainman.ActiveChain();
-    const CBlockIndex* tip{CHECK_NONFATAL(active_chain.Tip())};
+    CBlockIndex* tip{CHECK_NONFATAL(active_chain.Tip())};
 
     UniValue obj(UniValue::VOBJ);
     obj.pushKV("blocks",           active_chain.Height());
@@ -456,13 +464,24 @@ static RPCHelpMan getmininginfo()
     if (BlockAssembler::m_last_block_num_txs) obj.pushKV("currentblocktx", *BlockAssembler::m_last_block_num_txs);
     obj.pushKV("bits", strprintf("%08x", tip->nBits));
     obj.pushKV("difficulty", GetDifficulty(*tip));
-    obj.pushKV("target", GetTarget(*tip, chainman.GetParams().GetConsensus().powLimit).GetHex());
+    obj.pushKV("target", GetTarget(*tip, consensusParams.powLimit).GetHex());
     obj.pushKV("networkhashps",    getnetworkhashps().HandleRequest(request));
     obj.pushKV("pooledtx",         (uint64_t)mempool.size());
     obj.pushKV("chain", chainman.GetParams().GetChainTypeString());
+
+    UniValue next(UniValue::VOBJ);
+    CBlockIndex next_index;
+    NextEmptyBlockIndex(tip, consensusParams, next_index);
+
+    next.pushKV("height", next_index.nHeight);
+    next.pushKV("bits", strprintf("%08x", next_index.nBits));
+    next.pushKV("difficulty", GetDifficulty(next_index));
+    next.pushKV("target", GetTarget(next_index,consensusParams.powLimit).GetHex());
+    obj.pushKV("next", next);
+
     if (chainman.GetParams().GetChainType() == ChainType::SIGNET) {
         const std::vector<uint8_t>& signet_challenge =
-            chainman.GetParams().GetConsensus().signet_challenge;
+            consensusParams.signet_challenge;
         obj.pushKV("signet_challenge", HexStr(signet_challenge));
     }
     obj.pushKV("warnings", node::GetWarningsForRpc(*CHECK_NONFATAL(node.warnings), IsDeprecatedRPCEnabled("warnings")));
