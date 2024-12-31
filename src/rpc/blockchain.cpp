@@ -432,7 +432,9 @@ static RPCHelpMan getdifficulty()
 {
     return RPCHelpMan{"getdifficulty",
                 "\nReturns the proof-of-work difficulty as a multiple of the minimum difficulty.\n",
-                {},
+                {
+                    {"next", RPCArg::Type::BOOL, RPCArg::Default{false}, "difficulty for the next block, if found now"},
+                },
                 RPCResult{
                     RPCResult::Type::NUM, "", "the proof-of-work difficulty as a multiple of the minimum difficulty."},
                 RPCExamples{
@@ -443,7 +445,22 @@ static RPCHelpMan getdifficulty()
 {
     ChainstateManager& chainman = EnsureAnyChainman(request.context);
     LOCK(cs_main);
-    return GetDifficulty(*CHECK_NONFATAL(chainman.ActiveChain().Tip()));
+    CBlockIndex* tip{CHECK_NONFATAL(chainman.ActiveChain().Tip())};
+    auto consensusParams{chainman.GetParams().GetConsensus()};
+
+    bool next{false};
+    if (!request.params[0].isNull()) {
+        next = request.params[0].get_bool();
+    }
+
+    if (next) {
+        CBlockIndex next_index;
+        NextEmptyBlockIndex(tip, consensusParams, next_index);
+        return GetDifficulty(next_index);
+    } else {
+        return GetDifficulty(*tip);
+    }
+
 },
     };
 }
@@ -452,7 +469,9 @@ static RPCHelpMan gettarget()
 {
     return RPCHelpMan{"gettarget",
                 "\nReturns the proof-of-work target.\n",
-                {},
+                {
+                    {"next", RPCArg::Type::BOOL, RPCArg::Default{false}, "target for the next block, if found now"},
+                },
                 RPCResult{
                     RPCResult::Type::STR_HEX, "", "the proof-of-work target."},
                 RPCExamples{
@@ -464,7 +483,20 @@ static RPCHelpMan gettarget()
     ChainstateManager& chainman = EnsureAnyChainman(request.context);
     LOCK(cs_main);
     CBlockIndex* tip{CHECK_NONFATAL(chainman.ActiveChain().Tip())};
-    return GetTarget(*tip, chainman.GetParams().GetConsensus().powLimit).GetHex();
+    auto consensusParams{chainman.GetParams().GetConsensus()};
+
+    bool next{false};
+    if (!request.params[0].isNull()) {
+        next = request.params[0].get_bool();
+    }
+
+    if (next) {
+        CBlockIndex next_index;
+        NextEmptyBlockIndex(tip, consensusParams, next_index);
+        return GetTarget(next_index, consensusParams.powLimit).GetHex();
+    } else {
+        return GetTarget(*tip, consensusParams.powLimit).GetHex();
+    }
 },
     };
 }
