@@ -70,6 +70,14 @@ REGTEST_N_BITS = 0x207fffff  # difficulty retargeting is disabled in REGTEST cha
 REGTEST_TARGET = 0x7fffff0000000000000000000000000000000000000000000000000000000000
 assert_equal(uint256_from_compact(REGTEST_N_BITS), REGTEST_TARGET)
 
+DIFF_1_N_BITS = 0x1d00ffff
+DIFF_1_TARGET = 0x00000000ffff0000000000000000000000000000000000000000000000000000
+assert_equal(uint256_from_compact(DIFF_1_N_BITS), DIFF_1_TARGET)
+
+DIFF_4_N_BITS = 0x1c3fffc0
+DIFF_4_TARGET = int(DIFF_1_TARGET / 4)
+assert_equal(uint256_from_compact(DIFF_4_N_BITS), DIFF_4_TARGET)
+
 def nbits_str(nbits):
     return f"{nbits:08x}"
 
