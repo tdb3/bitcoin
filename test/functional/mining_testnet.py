@@ -60,5 +60,9 @@ class MiningTestnetTest(BitcoinTestFramework):
         assert_equal(node.getdifficulty(next=True), 4)
         assert_equal(node.gettarget(next=True), target_str(DIFF_4_TARGET))
 
+        chainstates = node.getchainstates()
+        assert_equal(len(chainstates['chainstates']), 1)
+        assert_equal(chainstates['chainstates'][0]['target'], target_str(DIFF_1_TARGET))
+
 if __name__ == '__main__':
     MiningTestnetTest(__file__).main()
