@@ -144,6 +144,7 @@ class BlockchainTest(BitcoinTestFramework):
             'mediantime',
             'pruned',
             'size_on_disk',
+            'target',
             'time',
             'verificationprogress',
             'warnings',
@@ -155,6 +156,8 @@ class BlockchainTest(BitcoinTestFramework):
 
         # result should have these additional pruning keys if manual pruning is enabled
         assert_equal(sorted(res.keys()), sorted(['pruneheight', 'automatic_pruning'] + keys))
+
+        assert_equal(res['target'], target_str(REGTEST_TARGET))
 
         # size_on_disk should be > 0
         assert_greater_than(res['size_on_disk'], 0)

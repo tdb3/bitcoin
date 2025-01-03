@@ -1363,6 +1363,7 @@ RPCHelpMan getblockchaininfo()
                 {RPCResult::Type::NUM, "headers", "the current number of headers we have validated"},
                 {RPCResult::Type::STR, "bestblockhash", "the hash of the currently best block"},
                 {RPCResult::Type::NUM, "difficulty", "the current difficulty"},
+                {RPCResult::Type::STR_HEX, "target", "The difficulty target"},
                 {RPCResult::Type::NUM_TIME, "time", "The block time expressed in " + UNIX_EPOCH_TIME},
                 {RPCResult::Type::NUM_TIME, "mediantime", "The median block time expressed in " + UNIX_EPOCH_TIME},
                 {RPCResult::Type::NUM, "verificationprogress", "estimate of verification progress [0..1]"},
@@ -1395,12 +1396,14 @@ RPCHelpMan getblockchaininfo()
 
     const CBlockIndex& tip{*CHECK_NONFATAL(active_chainstate.m_chain.Tip())};
     const int height{tip.nHeight};
+    auto chain_params{chainman.GetParams()};
     UniValue obj(UniValue::VOBJ);
-    obj.pushKV("chain", chainman.GetParams().GetChainTypeString());
+    obj.pushKV("chain", chain_params.GetChainTypeString());
     obj.pushKV("blocks", height);
     obj.pushKV("headers", chainman.m_best_header ? chainman.m_best_header->nHeight : -1);
     obj.pushKV("bestblockhash", tip.GetBlockHash().GetHex());
     obj.pushKV("difficulty", GetDifficulty(tip));
+    obj.pushKV("target", GetTarget(tip, chain_params.GetConsensus().powLimit).GetHex());
     obj.pushKV("time", tip.GetBlockTime());
     obj.pushKV("mediantime", tip.GetMedianTimePast());
     obj.pushKV("verificationprogress", chainman.GuessVerificationProgress(&tip));
@@ -1420,7 +1423,7 @@ RPCHelpMan getblockchaininfo()
     }
     if (chainman.GetParams().GetChainType() == ChainType::SIGNET) {
         const std::vector<uint8_t>& signet_challenge =
-            chainman.GetParams().GetConsensus().signet_challenge;
+            chain_params.GetConsensus().signet_challenge;
         obj.pushKV("signet_challenge", HexStr(signet_challenge));
     }
 
